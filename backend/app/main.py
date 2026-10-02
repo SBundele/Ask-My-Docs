@@ -1,13 +1,22 @@
 from sqlalchemy import text
 from pydantic import BaseModel, Field
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, File, HTTPException, UploadFile
 
 from app import rag
 from app.db import engine
+from app.config import CORS_ORIGINS
 from app.loaders import extract_text
 
 
 app = FastAPI(title="Ask My Docs")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class AskRequest(BaseModel):
     question: str = Field(min_length=1)
