@@ -10,6 +10,43 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U askuser -d askmydocs"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: askmydocs-backend
+    env_file:
+      - ./backend/.env
+    environment:
+      # Override: inside Docker the database's address is its room name, "db"
+      DATABASE_URL: postgresql+psycopg2://askuser:askpassword@db:5432/askmydocs
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - hf_cache:/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+
+  frontend:
+    build: ./frontend
+    container_name: askmydocs-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8080:80"
 
 volumes:
   pgdata:
+  hf_cache:
