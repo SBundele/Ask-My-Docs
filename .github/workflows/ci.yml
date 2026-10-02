@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+
+    # The robot starts its own database, same lunchbox as your Phase 2 one
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: askuser
+          POSTGRES_PASSWORD: askpassword
+          POSTGRES_DB: askmydocs
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U askuser -d askmydocs"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+psycopg2://askuser:askpassword@localhost:5432/askmydocs
+      HF_HOME: ${{ github.workspace }}/.hf-cache
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+
+      - name: Remember the MiniLM model between runs
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.hf-cache
+          key: hf-minilm-l6-v2
+
+      - name: Run tests
+        run: pytest -v
+
+  frontend-build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm run build
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-build]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t askmydocs-backend ./backend
+
+      - name: Build frontend image
+        run: docker build -t askmydocs-frontend ./frontend
