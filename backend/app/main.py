@@ -1,5 +1,5 @@
 from sqlalchemy import text
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from fastapi import FastAPI, File, HTTPException, UploadFile
 
 from app import rag
@@ -10,7 +10,7 @@ from app.loaders import extract_text
 app = FastAPI(title="Ask My Docs")
 
 class AskRequest(BaseModel):
-    question: str
+    question: str = Field(min_length=1)
 
 @app.get("/health")
 def health():
@@ -37,4 +37,7 @@ async def upload_document(file: UploadFile = File(...)):
 
 @app.post("/ask")
 def ask_question(body: AskRequest):
-    return rag.ask(body.question)
+    try:
+        return rag.ask(body.question)
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error))
