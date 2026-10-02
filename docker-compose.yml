@@ -1,0 +1,15 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: askmydocs-db
+    environment:
+      POSTGRES_USER: askuser
+      POSTGRES_PASSWORD: askpassword
+      POSTGRES_DB: askmydocs
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
