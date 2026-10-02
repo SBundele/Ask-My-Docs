@@ -6,3 +6,10 @@ sqlalchemy
 psycopg2-binary
 pgvector
 python-dotenv
+llama-index-core
+llama-index-llms-groq
+llama-index-embeddings-huggingface
+llama-index-vector-stores-postgres
+asyncpg
+pypdf
+python-multipart
